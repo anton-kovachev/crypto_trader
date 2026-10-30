@@ -1,6 +1,6 @@
 import config
 import json
-from mcp.server import FastMCP
+from mcp.server import MCPServer
 from models import BlockchainAccountData
 from pathlib import Path
 from models.uniswap import UniswapRouterData
@@ -11,7 +11,7 @@ from services.blockchain.account_service import (
 
 RESOURCES_DIR = Path(__file__).parent.parent.resolve() / "resources"
 
-mcp = FastMCP("blockchain_data_server")
+mcp = MCPServer("blockchain_data_server")
 
 
 @mcp.tool()

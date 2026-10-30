@@ -1,8 +1,19 @@
+import os
+import sys
 from pathlib import Path
+
 from agents.mcp import MCPServerStdio, MCPServerStdioParams
 
 PROJECT_DIR = str(Path(__file__).resolve().parent.parent)
-QDRANT_LOCAL_PATH = Path("memory/qdrant")
+
+
+def _qdrant_url() -> str:
+    qdrant_url = os.getenv("QDRANT_URL")
+    if qdrant_url:
+        return qdrant_url
+    if os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        raise EnvironmentError("QDRANT_URL must be set when running in AWS Lambda")
+    return "http://127.0.0.1:6333"
 
 
 def get_crypto_research_mcp_servers() -> list[MCPServerStdio]:
@@ -10,8 +21,8 @@ def get_crypto_research_mcp_servers() -> list[MCPServerStdio]:
         MCPServerStdio(
             MCPServerStdioParams(
                 {
-                    "command": "uv",
-                    "args": ["--verbose", "run", "-m", "mcp_servers.coinmarketcap_data_server"],
+                    "command": sys.executable,
+                    "args": ["-m", "mcp_servers.coinmarketcap_data_server"],
                     "cwd": PROJECT_DIR,
                 }
             ),
@@ -41,12 +52,23 @@ def get_crypto_research_mcp_servers() -> list[MCPServerStdio]:
                         "stdio",
                     ],
                     "env": {
-                        # "EMBEDDING_MODEL": "sentence-transformers/all-MiniLM-L6-v2",
-                        # "QDRANT_LOCAL_PATH": str(QDRANT_LOCAL_PATH),
                         "COLLECTION_NAME": "crypto_currency_knowledge_base",
-                        "QDRANT_URL": "http://127.0.0.1:6333",
+                        "QDRANT_URL": _qdrant_url(),
+                        **(
+                            {"QDRANT_API_KEY": os.environ["QDRANT_API_KEY"]}
+                            if os.getenv("QDRANT_API_KEY")
+                            else {}
+                        ),
                         "HF_HUB_VERBOSITY": "info",
-                        "TRANSFORMERS_VERBOSITY": "info"
+                        "TRANSFORMERS_VERBOSITY": "info",
+                        **(
+                            {
+                                "UV_CACHE_DIR": "/tmp/uv-cache",
+                                "HF_HOME": "/tmp/huggingface",
+                            }
+                            if os.getenv("AWS_LAMBDA_FUNCTION_NAME")
+                            else {}
+                        ),
                     },
                 }
             ),

@@ -1,8 +1,7 @@
-import os
 import uuid
 from collections.abc import Coroutine
 from contextlib import AsyncExitStack
-from pathlib import Path
+
 from typing import Any
 
 from agents import (
@@ -23,12 +22,12 @@ from mcp_servers import (
     get_cryptocurrency_trader_mcp_servers,
 )
 from mcp_servers.uniswap import get_uniswap_trading_servers
-from openai import AsyncOpenAI
 from tracers import make_trace_id
+from .bedrock_client import create_bedrock_client
+from .session_storage import get_session_db_path
+from model_config import resolve_model_name
 
-TRADER_DB_PATH = Path(__file__).parent.parent / "sessions" / "cryptocurrency_trader.db"
-TRADER_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-TRADER_DB_PATH.touch(exist_ok=True)
+TRADER_DB_PATH = get_session_db_path("cryptocurrency_trader.db")
 
 
 class CryptoCurrencyTrader:
@@ -37,20 +36,15 @@ class CryptoCurrencyTrader:
         self,
         name: str,
         strategy: str | None = None,
-        model_name: str = "gpt-5-mini",
+        model_name: str | None = None,
     ):
         self.name: str = name
         self.strategy: str = (
             strategy if strategy is not None else default_trader_stratergy(name)
         )
         self.model = OpenAIChatCompletionsModel(
-            openai_client=AsyncOpenAI(
-                api_key=os.getenv("OPENROUTER_API_KEY"),
-                base_url=os.getenv(
-                    "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-                ),
-            ),
-            model=model_name,
+            openai_client=create_bedrock_client(),
+            model=resolve_model_name(model_name),
         )
 
         self.session = SQLiteSession(

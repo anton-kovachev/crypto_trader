@@ -1,4 +1,4 @@
-from mcp.server import FastMCP
+from mcp.server import MCPServer
 from numpy import uint
 from services.uniswap import (
     get_quote as uniswap_get_quote,
@@ -10,7 +10,7 @@ from services.uniswap import (
 from models.uniswap import QuoteResult, SwapTransaction
 from typing import Any
 
-mcp = FastMCP("uniswap_server")
+mcp = MCPServer("uniswap_server")
 
 
 @mcp.tool()
@@ -42,46 +42,47 @@ def get_quote(token_in: str, token_out: str, amount_in: str) -> QuoteResult:
     return uniswap_get_quote(token_in, token_out, amount_in)
 
 
-@mcp.tool()
-def build_permit2_signature(
-    private_key: str,
-    token: str,
-    amount: int,
-    nonce: int,
-    expiration: int,
-    permit2_address: str,
-    spender: str,
-) -> str:
-    """
-    Generate an EIP-712 Permit2 signature for a token. This signature allows a
-    third-party relayer or router to spend a specific amount of tokens on
-    behalf of the user without requiring a prior on-chain 'approve' transaction.
+# @mcp.tool()
+# def build_permit2_signature(
+#     private_key: str,
+#     token: str,
+#     amount: int,
+#     nonce: int,
+#     expiration: int,
+#     permit2_address: str,
+#     spender: str,
+# ) -> str:
+#     """
+#     Generate an EIP-712 Permit2 signature for a token. This signature allows a
+#     third-party relayer or router to spend a specific amount of tokens on
+#     behalf of the user without requiring a prior on-chain 'approve' transaction.
 
-    This is a critical step for implementing gasless swaps or intent-based
-    trading flows.
+#     This is a critical step for implementing gasless swaps or intent-based
+#     trading flows.
 
-    Args:
-        private_key: The private key of the user signing the permit.
-        token: The contract address of the ERC-20 token being authorized.
-        amount: The maximum amount of tokens the spender is authorized to move (in wei).
-        nonce: The current nonce for the user's Permit2 authorization.
-        expiration: The Unix timestamp after which the signature is no longer valid.
-        permit2_address: The address of the Permit2 contract on the network.
-        spender: The address authorized to spend the tokens (e.g., the Uniswap Router).
+#     Args:
+#         private_key: The private key of the user signing the permit.
+#         token: The contract address of the ERC-20 token being authorized.
+#         amount: The maximum amount of tokens the spender is authorized to move (in wei).
+#         nonce: The current nonce for the user's Permit2 authorization.
+#         expiration: The Unix timestamp after which the signature is no longer valid.
+#         permit2_address: The address of the Permit2 contract on the network.
+#         spender: The address authorized to spend the tokens (e.g., the Uniswap Router).
 
-    Returns:
-        str: The hex-encoded signature that can be submitted to the blockchain.
-    """
-    return uniswap_build_permit2_signature(
-        private_key, token, amount, nonce, expiration, permit2_address, spender
-    )
+#     Returns:
+#         str: The hex-encoded signature that can be submitted to the blockchain.
+#     """
+#     return uniswap_build_permit2_signature(
+#         private_key, token, amount, nonce, expiration, permit2_address, spender
+#     )
 
 
 @mcp.tool()
 def submit_swap_transaction(tx: SwapTransaction) -> dict[str, Any]:
     """
     Submit a signed swap transaction to the blockchain via the provided account private key.
-    This tool should be used after obtaining a quote for price verification
+    This tool should be used after obtaining a quote for price verification and fetching the current blockchain account data to ensure the transaction is valid and executable.
+    Always prepare the calldata for the swap transaction accurately to match the expected swap parameters.
 
     Args:
         tx: A SwapTransaction object containing the destination address,

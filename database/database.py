@@ -1,22 +1,86 @@
+import json
+import logging
+import os
+import shutil
 import sqlite3
 from pathlib import Path
 from typing import Any
-import logging
-import json
-from datetime import datetime
+
+import boto3
+from botocore.exceptions import ClientError
+
 from utils.json_utils import DateTimeEncoder, DateTimeDecoder
 
 logging.basicConfig(level=logging.INFO)
 
+IS_LAMBDA = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+LOCAL_DB_PATH = Path(__file__).parent.resolve() / "accounts.db"
+LAMBDA_DB_PATH = Path("/tmp/crypto-trader/accounts.db")
+
 
 class AccountsDatabase:
-    DB_PATH = Path(__file__).parent.resolve() / "accounts.db"
+    IS_LAMBDA = IS_LAMBDA
+    DB_PATH = (
+        LAMBDA_DB_PATH
+        if IS_LAMBDA
+        else Path(os.getenv("ACCOUNT_DB_PATH") or LOCAL_DB_PATH)
+    )
 
-    def __init__(self, db_name=DB_PATH):
-        self.connection = sqlite3.connect(db_name)
+    def __init__(self, db_name: str | Path | None = None):
+        db_path = Path(db_name) if db_name is not None else self.DB_PATH
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.connection = sqlite3.connect(db_path)
         self.cursor = self.connection.cursor()
         self.create_accounts_table()
         self.create_logs_table()
+
+    @classmethod
+    def _s3_location(cls) -> tuple[str, str]:
+        bucket = os.getenv("ACCOUNT_DB_S3_BUCKET")
+        if not bucket:
+            raise RuntimeError("ACCOUNT_DB_S3_BUCKET must be set in AWS Lambda")
+        key = os.getenv("ACCOUNT_DB_S3_KEY", "accounts/accounts.db")
+        return bucket, key
+
+    @classmethod
+    def load_from_s3(cls) -> None:
+        if not cls.IS_LAMBDA:
+            return
+
+        bucket, key = cls._s3_location()
+        cls.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        for suffix in ("", "-wal", "-shm"):
+            Path(f"{cls.DB_PATH}{suffix}").unlink(missing_ok=True)
+
+        client = boto3.client("s3")
+        try:
+            response = client.get_object(Bucket=bucket, Key=key)
+        except ClientError as error:
+            error_code = error.response.get("Error", {}).get("Code")
+            if error_code in {"NoSuchKey", "404", "NotFound"}:
+                return
+            raise
+
+        body = response["Body"]
+        temporary_path = cls.DB_PATH.with_name(f"{cls.DB_PATH.name}.download")
+        try:
+            with temporary_path.open("wb") as database_file:
+                shutil.copyfileobj(body, database_file)
+            os.replace(temporary_path, cls.DB_PATH)
+        finally:
+            body.close()
+            temporary_path.unlink(missing_ok=True)
+
+    @classmethod
+    def save_to_s3(cls) -> None:
+        if not cls.IS_LAMBDA:
+            return
+        if not cls.DB_PATH.is_file():
+            raise RuntimeError(f"Account database not found at {cls.DB_PATH}")
+
+        bucket, key = cls._s3_location()
+        with cls.DB_PATH.open("rb") as database_file:
+            boto3.client("s3").upload_fileobj(database_file, bucket, key)
 
     def create_accounts_table(self):
         self.cursor.execute("""

@@ -1,12 +1,12 @@
 import requests
 import os
 import asyncio
-from mcp.server import FastMCP
+from mcp.server import MCPServer
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-mcp = FastMCP("pushover_push_server")
+mcp = MCPServer("pushover_push_server")
 
 
 @mcp.tool()

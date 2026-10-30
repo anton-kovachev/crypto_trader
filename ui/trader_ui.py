@@ -1,14 +1,12 @@
-import os
 import gradio as gr
 import pandas as pd
 import plotly.express as px
-from crypto_agents import CryptoCurrencyReporter
 from output_models import AccountOutput
+from model_config import resolve_model_name
 
 from .trader_ui_util import Color, css, js
 
-from collections.abc import Callable, Coroutine
-from typing import Any
+from collections.abc import Awaitable, Callable
 import asyncio
 
 mapper = {
@@ -26,22 +24,22 @@ from datetime import datetime
 class Trader:
     def __init__(
         self,
-        reporter: Callable[[], Coroutine[Any, Any, AccountOutput]],
+        reporter: Callable[[], Awaitable[AccountOutput]],
         account: AccountOutput,
-        model_name: str = os.getenv("MODEL_NAME", "gpt-5-mini"),
+        model_name: str | None = None,
     ):
         # reporter: async callable that returns AccountOutput when awaited
         self.reporter = reporter
         self.name = account.account_name
         # self.model_name = account.model_name
         self.account = account
-        self.model_name = model_name
+        self.model_name = resolve_model_name(model_name)
 
     async def reload(self):
         self.account = await self.reporter()
 
     def get_title(self) -> str:
-        return f"<div style='text-align: center;font-size:34px;'>{self.name}<span style='color:#ccc;font-size:24px;'> ({self.model_name})</span></div>"
+        return f"<div class='dashboard-title'>{self.name}<span> ({self.model_name})</span></div>"
 
     # def get_strategy(self) -> str:
     #     return self.account.get_strategy()
@@ -69,17 +67,35 @@ class Trader:
             margin=margin,
             xaxis_title="Date",
             yaxis_title="Value (USDC)",
-            paper_bgcolor="#bbb",
-            plot_bgcolor="#dde",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="DM Sans, sans-serif", color="#cfc3e2"),
+            hoverlabel=dict(
+                bgcolor="#211a31",
+                bordercolor="#9b73d0",
+                font=dict(color="#f4efff"),
+            ),
         )
-        fig.update_traces(line=dict(color="yellow", width=4))
+        fig.update_traces(
+            line=dict(color="#b58aff", width=3),
+            fill="tozeroy",
+            fillcolor="rgba(156, 112, 224, 0.12)",
+            hovertemplate="%{x|%b %d, %Y}<br>$%{y:,.2f}<extra></extra>",
+        )
         fig.update_xaxes(
             dtick=86_400_000,
             tickformat="%m/%d",
             tickangle=45,
             tickfont=dict(size=8),
+            gridcolor="rgba(183, 148, 255, 0.1)",
+            zerolinecolor="rgba(183, 148, 255, 0.14)",
         )
-        fig.update_yaxes(tickfont=dict(size=8), tickformat=",.0f")
+        fig.update_yaxes(
+            tickfont=dict(size=8),
+            tickformat=",.0f",
+            gridcolor="rgba(183, 148, 255, 0.1)",
+            zerolinecolor="rgba(183, 148, 255, 0.14)",
+        )
         return fig
 
     def get_holdings_df(self) -> pd.DataFrame:
@@ -153,9 +169,14 @@ class Trader:
                 for holding in self.account.holdings
             ]
         )
-        color = "green" if pnl >= 0 else "red"
         sign = "+" if pnl >= 0 else "-"
-        return f"<div style='text-align: center;background-color:{color};'><span style='font-size:32px'>${portfolio_value:,.0f}</span><span style='font-size:24px'>&nbsp;&nbsp;&nbsp;{sign}${abs(pnl):,.0f}</span></div>"
+        pnl_class = "portfolio-pnl" if pnl >= 0 else "portfolio-pnl negative"
+        return (
+            "<div class='portfolio-value'>"
+            f"<span class='portfolio-total'>${portfolio_value:,.0f}</span>"
+            f"<span class='{pnl_class}'>{sign}${abs(pnl):,.0f} P&amp;L</span>"
+            "</div>"
+        )
 
     def get_logs(self, previous=None) -> str:
         response = ""
@@ -195,7 +216,7 @@ class Trader:
 
             color = mapper.get(type, Color.WHITE).value
             response += f"<span style='color:{color}'>{timestamp} : [{type}] {message}</span><br/>"
-        response = f"<div style='height:250px; overflow-y:auto;'>{response}</div>"
+        response = f"<div class='activity-log' style='height:250px; overflow-y:auto; padding:12px;'>{response}</div>"
         if response != previous:
             return response
         return gr.update()
@@ -210,7 +231,7 @@ class TraderView:
         self.transactions_table = None
 
     def make_ui(self):
-        with gr.Column():
+        with gr.Column(elem_classes=["trader-card"]):
             gr.HTML(self.trader.get_title())
             with gr.Row():
                 self.portfolio_value = gr.HTML(self.trader.get_portfolio_value)
@@ -221,7 +242,7 @@ class TraderView:
                     show_label=True,
                 )
             with gr.Row(variant="panel"):
-                self.log = gr.HTML(self.trader.get_logs())
+                self.log = gr.HTML(self.trader.get_logs(), elem_classes=["activity-log-container"])
             with gr.Row():
                 self.holdings_table = gr.Dataframe(
                     value=self.trader.get_holdings_df,
@@ -285,7 +306,7 @@ class TraderView:
 
 # Main UI construction
 async def create_ui(
-    account_reporters: list[Callable[[], Coroutine[Any, Any, AccountOutput]]],
+    account_reporters: list[Callable[[], Awaitable[AccountOutput]]],
 ):
     """Create the main Gradio UI for the trading simulation
 
@@ -304,10 +325,16 @@ async def create_ui(
     ]
     trader_views = [TraderView(trader) for trader in traders]
 
-    with gr.Blocks(title="Traders", fill_width=True) as ui:
+    with gr.Blocks(title="Crypto Trader Dashboard", fill_width=True, elem_classes=["dashboard"]) as ui:
         with gr.Row():
-            for trader_view in trader_views:
-                trader_view.make_ui()
+            if not trader_views:
+                gr.Markdown(
+                    "No account reports are in Redis yet. Generate a report with "
+                    "the Lambda workflow `reporter`, then restart the dashboard."
+                )
+            else:
+                for trader_view in trader_views:
+                    trader_view.make_ui()
 
     # Return both the UI blocks and the trader views so callers can update
     # the underlying data and push component updates dynamically.

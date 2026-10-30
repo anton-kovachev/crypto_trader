@@ -1,8 +1,8 @@
 from entities import Account, AccountLog
-from mcp.server import FastMCP
+from mcp.server import MCPServer
 from typing import Any
 
-mcp = FastMCP("crypto_account_mcp_server")
+mcp = MCPServer("crypto_account_mcp_server")
 
 
 @mcp.tool()
@@ -19,13 +19,13 @@ def get_account_names() -> list[str]:
 @mcp.tool()
 def get_account(account_name: str) -> Account | None:
     """
-    Retrieve an account by its name.
+    Retrieve an account by its account name. This tool should be used to fetch pre existing account information
 
     Args:
         account_name (str): The name of the account to retrieve.
 
     Returns:
-        Account | None: The account object corresponding to the given name, or None if not found.
+        Account | None: The account object corresponding to the given name, or None if account with such name is not found.
     """
     return Account.get(account_name)
 
@@ -47,9 +47,9 @@ def create_account(account_name: str) -> Account:
 
 
 @mcp.tool()
-def report_account(account_name: str) -> str | None:
+def generate_report_for_account(account_name: str) -> str | None:
     """
-    Generate a report for the given account.
+    Generates a detailed crypto portfolio holdings report for the given account.
 
     Args:
         account_name (str): The name of the account to generate a report for.

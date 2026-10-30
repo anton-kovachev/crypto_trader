@@ -1,7 +1,5 @@
-import os
 import uuid
 from contextlib import AsyncExitStack
-from pathlib import Path
 from typing import Any
 
 from agents import (
@@ -21,17 +19,15 @@ from agents import (
 )
 from agents.mcp import MCPServer
 from .crypto_currency_validator import CryptoCurrencyValidator
+from .bedrock_client import create_bedrock_client
+from .session_storage import get_session_db_path
 from instructions import reporter_instructions
+from model_config import resolve_model_name
 from mcp_servers import get_cryptocurrency_reporter_mcp_servers
-from openai import AsyncOpenAI
 from output_models import ReporterOutput
 from tracers import make_trace_id
 
-REPORTER_DB_PATH = (
-    Path(__file__).parent.parent / "sessions" / "cryptocurrency_reporter.db"
-)
-REPORTER_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-REPORTER_DB_PATH.touch(exist_ok=True)
+REPORTER_DB_PATH = get_session_db_path("cryptocurrency_reporter.db")
 
 
 def _make_report_validation_guardrail(
@@ -64,18 +60,13 @@ class CryptoCurrencyReporter:
     def __init__(
         self,
         name: str,
-        model_name: str = "gpt-5-mini",
+        model_name: str | None = None,
         strategy: str | None = None,
     ):
         self.name: str = name
         self.model = OpenAIChatCompletionsModel(
-            openai_client=AsyncOpenAI(
-                api_key=os.getenv("OPENROUTER_API_KEY"),
-                base_url=os.getenv(
-                    "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-                ),
-            ),
-            model=model_name,
+            openai_client=create_bedrock_client(),
+            model=resolve_model_name(model_name),
         )
 
         self.session = SQLiteSession(
@@ -109,9 +100,9 @@ class CryptoCurrencyReporter:
                     )
                 ),
                 output_type=ReporterOutput,
-                output_guardrails=[
-                    _make_report_validation_guardrail(mcp_servers, agent_tools)
-                ],
+                # output_guardrails=[
+                #     _make_report_validation_guardrail(mcp_servers, agent_tools)
+                # ],
             )
 
             trace_name = f"{self.name}-reporter"

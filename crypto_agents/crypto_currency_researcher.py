@@ -1,8 +1,5 @@
-import os
 import uuid
 from contextlib import AsyncExitStack
-from pathlib import Path
-
 from agents import (
     Agent,
     FunctionTool,
@@ -19,26 +16,21 @@ from instructions import researcher_instructions, researcher_tool_description
 from mcp_servers import (
     get_crypto_research_mcp_servers,
 )
-from openai import AsyncOpenAI
 from tracers import make_trace_id
+from .bedrock_client import create_bedrock_client
+from .session_storage import get_session_db_path
+from model_config import resolve_model_name
 
-RESEARCHER_DB_PATH = Path(__file__).parent.parent / "sessions" / "crypto_researcher.db"
-RESEARCHER_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-RESEARCHER_DB_PATH.touch(exist_ok=True)
+RESEARCHER_DB_PATH = get_session_db_path("crypto_researcher.db")
 
 
 class CryptoCurrencyResearcher:
 
-    def __init__(self, name: str, model_name: str = "gpt-5-mini"):
+    def __init__(self, name: str, model_name: str | None = None):
         self.name: str = name
         self.model = OpenAIChatCompletionsModel(
-            openai_client=AsyncOpenAI(
-                api_key=os.getenv("OPENROUTER_API_KEY"),
-                base_url=os.getenv(
-                    "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-                ),
-            ),
-            model=model_name,
+            openai_client=create_bedrock_client(),
+            model=resolve_model_name(model_name),
         )
         self.session = SQLiteSession(
             session_id=str(uuid.uuid4()), db_path=RESEARCHER_DB_PATH

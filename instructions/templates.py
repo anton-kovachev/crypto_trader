@@ -35,10 +35,10 @@ def researcher_instructions():
 def default_trader_stratergy(name: str):
     return f"""
                 You are a Cryptocurrency Trading Agent under the {name}. Your primary goal is to identify and execute high-potential trades by leveraging the insights provided by the Researcher Agent. 
-                Then you use the account tools to create an account on your name {name} (if such does not already exist) and record there the transactions and holding
+                Then you use the account tools to create an account on your name {name} (if such does not already exists i.e. first you check whether an account already exists) and record there the transactions and holding
 
                 Starting balance:
-                - Initial capital: $1000 USDC that will
+                - Initial capital: $1000 USDC (1000_000000 in smallest unit) that will be used for trading.
                 - Always perform split trading to diversify risk you should calculate the appropriate position size for each trade based on the risk metrics. Fewer risk metrics should lead to larger position sizes.
                 - You may use the entire capital to trade if the market conditions are favorable or you can use a portion of it based on your risk assessment.
                 - Always produce uniswap router swap calldata
@@ -128,8 +128,10 @@ def trade_message(account, strategy, note=""):
 
 def reporter_instructions(name: str):
     return f"""
+            ##Important: No hallucinations. Always base your information and decisions on the actual account data retrieved from the crypto account tools and research tools.
+            ##Important: Always use your provided tool to retrieve and analyze account and market data. Especially account data by account name. You must attempt at least one retrieval of the account data before making any decisions or generating and response.
             Instructions for the CryptoCurrencyReporter agent:
-                1. Monitor {name} account holdings and transactions. You are responsible only for {name} account. If yoi don't find the {name} account using the provided tools you should return an error message.
+                1. Monitor {name} account holdings and transactions. You are responsible only for {name} account. If yoi don't find the {name} account using the provided crytpo account tools you should return an error message.
                 2. Provide information about the account holding value in btc and usdc for each token position.
                 3. Provide information about profit or loss for each token position regarding the average acquisition cost.
                 4. Use the provided crypto currency research tools for retrieving and analyzing account and market data regarding token prices in the portfolio and their prices in btc and usdc at the time of each transaction.

@@ -1,8 +1,5 @@
-import os
 import uuid
 from contextlib import AsyncExitStack
-from pathlib import Path
-
 from agents import (
     Agent,
     ModelSettings,
@@ -18,15 +15,13 @@ from agents import (
 from agents.mcp import MCPServer
 from instructions import account_verifier_instructions
 from mcp_servers import get_cryptocurrency_reporter_mcp_servers
-from openai import AsyncOpenAI
 from output_models import AccountValidationOutput, ReporterOutput
 from tracers import make_trace_id
+from .bedrock_client import create_bedrock_client
+from .session_storage import get_session_db_path
+from model_config import resolve_model_name
 
-VALIDATOR_DB_PATH = (
-    Path(__file__).parent.parent / "sessions" / "cryptocurrency_validator.db"
-)
-VALIDATOR_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-VALIDATOR_DB_PATH.touch(exist_ok=True)
+VALIDATOR_DB_PATH = get_session_db_path("cryptocurrency_validator.db")
 
 
 class CryptoCurrencyValidator:
@@ -34,19 +29,14 @@ class CryptoCurrencyValidator:
         self,
         reporter_output: ReporterOutput,
         name: str = "CryptoCurrencyValidator",
-        model_name: str = "gpt-5-mini",
+        model_name: str | None = None,
         strategy: str | None = None,
     ):
         self.name = name
         self.reporter_output = reporter_output
         self.model = OpenAIChatCompletionsModel(
-            openai_client=AsyncOpenAI(
-                api_key=os.getenv("OPENROUTER_API_KEY"),
-                base_url=os.getenv(
-                    "OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"
-                ),
-            ),
-            model=model_name,
+            openai_client=create_bedrock_client(),
+            model=resolve_model_name(model_name),
         )
         self.session = SQLiteSession(
             session_id=str(uuid.uuid4()), db_path=VALIDATOR_DB_PATH
