@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Local reporting",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/local_runner.py",
+      "args": ["reporting"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "subProcess": true
+    },
+    {
+      "name": "Local UI",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/local_runner.py",
+      "args": ["ui", "--run-every-n-seconds", "20"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "subProcess": true
+    }
+  ]
+}

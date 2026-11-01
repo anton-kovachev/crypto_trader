@@ -96,7 +96,7 @@ class AccountOutput(BaseModel):
     )
     transactions: list[AccountTransaction] = Field(
         ...,
-        description="List of the last five account transactions for the account ordered by timestamp in descending order retrieved from the account's activity (not the agent's actions)",
+        description="List of the last ten account transactions for the account ordered by timestamp in descending order retrieved from the account's activity (not the agent's actions)",
     )
 
 
@@ -104,7 +104,11 @@ class ReporterOutput(BaseModel):
     account: AccountOutput = Field(
         ..., description="Account for which the report is generated"
     )
+    notes_and_limitations: str | None = Field(
+        None,
+        description="Optional notes and limitations regarding the report generation",
+    )
     error_message: str | None = Field(
         None,
-        description="Optional error message if any error occurred during the report generation",
+        description="Optional error message if any error occurred during the report generation. Should be set only if critical tools such as account retrieval or pricing fail",
     )

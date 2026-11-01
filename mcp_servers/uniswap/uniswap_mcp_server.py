@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from agents.mcp import MCPServerStdio, MCPServerStdioParams
 
@@ -10,8 +11,8 @@ def get_uniswap_trading_servers() -> list[MCPServerStdio]:
         for params in [
             MCPServerStdioParams(
                 {
-                    "command": "uv",
-                    "args": ["run", "-m", "mcp_servers.uniswap.uniswap_trading_server"],
+                    "command": sys.executable,
+                    "args": ["-m", "mcp_servers.uniswap.uniswap_trading_server"],
                     "cwd": PROJECT_ROOT,
                 }
             )

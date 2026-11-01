@@ -1,6 +1,8 @@
+"""MCP tools for CoinMarketCap data."""
+
 from typing import Literal
 
-from mcp.server import FastMCP
+from mcp.server import MCPServer
 from models import (
     CryptoCurrencyHistoricalListing,
     CryptocurrencyMap,
@@ -16,7 +18,7 @@ from services import (
     get_historical_listings,
 )
 
-mcp = FastMCP("coinmarketcap_data_server")
+mcp = MCPServer("coinmarketcap_data_server")
 
 
 @mcp.tool()
@@ -122,7 +124,7 @@ def get_historical_cryptocurrency_data(
     available. Fields other than ID, name, symbol, and slug may be null.
 
     Args:
-        date: The date for historical listings in YYYY-MM-DD format.
+        date: The date for historical listings in YYYY-MM-DD format should be at least 1 day in the past.
         start: The starting index for the results (default is 0).
         limit: The maximum number of results to return (default is 100).
         convert: The currency to convert the market data into (optional).

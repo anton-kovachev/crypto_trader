@@ -34,7 +34,7 @@ def _server_params() -> StdioServerParameters:
             "uv",
             "run",
             "-m",
-            "mcp_servers.coinmarketcap_data_server",
+            "mcp_servers.coinmarketcap_data.server",
         ],
         env=None,
         cwd=CWD_PATH,

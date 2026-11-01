@@ -1,3 +1,4 @@
+import sys
 from agents.mcp import MCPServerStdio, MCPServerStdioParams
 from pathlib import Path
 
@@ -11,7 +12,7 @@ def get_cryptocurrency_reporter_mcp_servers() -> list[MCPServerStdio]:
         #     params=MCPServerStdioParams(
         #         {
         #             "command": "uv",
-        #             "args": ["run", "-m", "mcp_servers.blockchain_data_server"],
+        #             "args": ["run", "-m", "mcp_servers.blockchain_data.server"],
         #             "cwd": PROJECT_DIR,
         #         }
         #     ),
@@ -20,9 +21,8 @@ def get_cryptocurrency_reporter_mcp_servers() -> list[MCPServerStdio]:
             name="crypto_account_mcp_server",
             params=MCPServerStdioParams(
                 {
-                    "command": "uv",
+                    "command": sys.executable,
                     "args": [
-                        "run",
                         "-m",
                         "mcp_servers.accounts.crypto_account_mcp_server",
                     ],
