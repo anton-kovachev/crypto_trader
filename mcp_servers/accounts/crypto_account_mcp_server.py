@@ -76,7 +76,7 @@ def record_swap_transaction(
     token_out_address: str,
     token_out_amount: int,
     blockchain_transaction: dict[str, Any],
-) -> None:
+) -> str | None:
     """
     Record a swap transaction for the given account.
 
@@ -91,21 +91,24 @@ def record_swap_transaction(
         blockchain_transaction (dict[str, Any]): The blockchain transaction details.
 
     Returns:
-        None
+        None if successful, or an error message string if failed describing the reason.
     """
     account = Account.get(account_name)
     if account is None:
         raise ValueError(f"Account with name {account_name} does not exist.")
 
-    account.record_swap_transaction(
-        token_in_symbol=token_in_symbol,
-        token_in_address=token_in_address,
-        token_in_amount=token_in_amount,
-        token_out_symbol=token_out_symbol,
-        token_out_address=token_out_address,
-        token_out_amount=token_out_amount,
-        blockchain_transaction=blockchain_transaction,
-    )
+    try:
+        account.record_swap_transaction(
+            token_in_symbol=token_in_symbol,
+            token_in_address=token_in_address,
+            token_in_amount=token_in_amount,
+            token_out_symbol=token_out_symbol,
+            token_out_address=token_out_address,
+            token_out_amount=token_out_amount,
+            blockchain_transaction=blockchain_transaction,
+        )
+    except Exception as e:
+        return f"Failed to record swap transaction: {e}"
 
 
 @mcp.tool()
@@ -148,9 +151,11 @@ def get_account_resource(name: str) -> Account:
     return account
 
 
-@mcp.resource("accounts://accounts_server/{name}/logs/{last_n}")
-def get_account_logs_resource(name: str, last_n: int = 10) -> list[AccountLog]:
+# @mcp.resource("accounts://accounts_server/{name}/activity_logs/{last_n}")
+@mcp.tool()
+def get_account_activity_logs_resource(name: str, last_n: int = 10) -> list[AccountLog]:
     """
+    Activity logs for the account returning a list of the last_n (10 by default) activity logs related with this account.
     Get the last n logs for the given account.
 
     Args:
@@ -171,81 +176,3 @@ def get_account_logs_resource(name: str, last_n: int = 10) -> list[AccountLog]:
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")
-    # # Simple smoke tests for the account tools
-    # test_name = "test_account_mcp"
-    # print("== crypto_account_mcp_server self-test ==")
-
-    # # 1) create
-    # try:
-    #     acct = create_account(test_name)
-    #     print("create_account ->", getattr(acct, "account_name", acct))
-    # except Exception as e:
-    #     print("create_account error:", e)
-
-    # # 2) get
-    # try:
-    #     acct = get_account(test_name)
-    #     print("get_account ->", getattr(acct, "account_name", acct))
-    #     # inspect holdings for building a swap
-    #     holdings = getattr(acct, "holdings", []) or []
-    #     if holdings:
-    #         sample_out = holdings[0]
-    #         token_out_symbol = getattr(sample_out, "token_symbol", None)
-    #         token_out_address = getattr(sample_out, "token_address", None)
-    #     else:
-    #         token_out_symbol = "USD"
-    #         token_out_address = "0x0"
-    # except Exception as e:
-    #     print("get_account error:", e)
-    #     token_out_symbol = "USD"
-    #     token_out_address = "0x0"
-
-    # # 3) record a swap transaction (swap a small amount into a mock token)
-    # try:
-    #     token_in_symbol = "MOCK"
-    #     token_in_address = "0xmock"
-    #     token_in_amount = 1
-    #     token_out_amount = 100
-    #     record_swap_transaction(
-    #         test_name,
-    #         token_in_symbol,
-    #         token_in_address,
-    #         token_in_amount,
-    #         token_out_symbol,
-    #         token_out_address,
-    #         token_out_amount,
-    #         blockchain_transaction={"calldata": "0xdeadbeef", "hash": "0xdeadbeefhash"},
-    #     )
-    #     print("record_swap_transaction -> OK")
-    # except Exception as e:
-    #     print("record_swap_transaction error:", e)
-
-    # # 4) report
-    # try:
-    #     report = report_account(test_name)
-    #     print("report_account ->", report[:200] if isinstance(report, str) else report)
-    # except Exception as e:
-    #     print("report_account error:", e)
-
-    # # 5) reset account and delete DB file to leave a clean state
-    # try:
-    #     reset_account(test_name)
-    #     print("reset_account -> OK")
-    # except Exception as e:
-    #     print("reset_account error:", e)
-
-    # # Remove the DB file to fully reset state
-    # try:
-    #     from database import AccountsDatabase
-
-    #     db_path = AccountsDatabase.DB_PATH
-    #     from pathlib import Path
-
-    #     p = Path(db_path)
-    #     if p.exists():
-    #         p.unlink()
-    #         print(f"Deleted DB file: {p}")
-    # except Exception as e:
-    #     print("Failed to delete DB file:", e)
-
-    # print("== self-test complete ==")

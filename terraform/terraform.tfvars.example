@@ -1,0 +1,40 @@
+# Copy to terraform.tfvars and replace the placeholders.
+aws_region   = "eu-north-1"
+project_name = "crypto-trader"
+
+# Create this JSON Secrets Manager secret before deploying.
+# See terraform/README.md for its required JSON keys.
+backend_secrets_arn = "arn:aws:secretsmanager:eu-north-1:ACCOUNT_ID:secret:crypto-trader/backend-credentials"
+
+# Use a network-accessible Qdrant endpoint. Do not use localhost for Lambda.
+qdrant_url = "https://YOUR_QDRANT_ENDPOINT"
+
+model_name           = "gpt-5-mini"
+openrouter_base_url  = "https://openrouter.ai/api/v1"
+chain_id             = 1
+chain_name           = "ethereum"
+usd_token_symbol     = "USDC"
+usd_token_address    = "REPLACE_WITH_USDC_CONTRACT_ADDRESS"
+initial_usdc_amount  = 1000
+user_address         = "REPLACE_WITH_PUBLIC_WALLET_ADDRESS"
+uniswap_router_address = "REPLACE_WITH_UNISWAP_ROUTER_ADDRESS"
+
+# The deployment uses the default VPC. Confirm this /24 does not overlap
+# existing VPC subnets before applying.
+lambda_private_subnet_cidr = "172.31.240.0/24"
+
+# EventBridge Scheduler uses UTC. These run every 30 minutes and hourly at
+# minute 5, respectively. Scheduled trading can execute real transactions.
+trading_schedule_expression  = "cron(0/30 * * * ? *)"
+reporting_schedule_expression = "cron(5 * * * ? *)"
+
+redis_node_type                 = "cache.t3.micro"
+redis_engine_version            = "7.1"
+redis_port                      = 6379
+account_db_s3_key               = "accounts/accounts.db"
+ui_refresh_every_n_seconds      = 30
+lambda_web_adapter_layer_version = 30
+
+trader_name     = "Max Kaiser"
+researcher_name = "Guy Researcher"
+reporter_name   = "Max Kaiser"

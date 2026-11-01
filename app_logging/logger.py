@@ -1,12 +1,19 @@
 import logging
+import os
 from pathlib import Path
 
 LOG_PATH = Path(__file__).resolve().parent.parent / "logs/error_logs.txt"
 
+if os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+    log_handlers: list[logging.Handler] = [logging.StreamHandler()]
+else:
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    log_handlers = [logging.FileHandler(LOG_PATH, mode="a", encoding="utf-8")]
+
 logging.basicConfig(
     level=logging.ERROR,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    handlers=[logging.FileHandler(LOG_PATH, mode="a", encoding="utf-8")],
+    handlers=log_handlers,
     force=True,
 )
 

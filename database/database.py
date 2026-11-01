@@ -191,13 +191,15 @@ class AccountsDatabase:
         self.cursor.execute(
             """
             INSERT INTO logs (name, datetime, type, message)
-            VALUES (?, datetime('now'), ?, ?)
+            VALUES (?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), ?, ?)
             """,
             (name, type, message),
         )
         self.connection.commit()
 
-    def read_logs(self, name: str, last_n=10) -> list[dict[str, Any]]:
+    def read_logs(
+        self, name: str, type: str = "account", last_n=10
+    ) -> list[dict[str, Any]]:
         self.cursor.execute(
             """
             SELECT * FROM logs WHERE name = ? ORDER BY datetime DESC LIMIT ?

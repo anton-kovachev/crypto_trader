@@ -11,3 +11,7 @@ logs/*
 .gradio/
 .pytest_cache/
 .ruff_cache/
+/dist/
+/terraform/.terraform/
+/terraform/terraform.tfstate*
+/terraform/terraform.tfvars

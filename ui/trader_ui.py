@@ -15,10 +15,21 @@ mapper = {
     "function": Color.GREEN,
     "generation": Color.YELLOW,
     "response": Color.MAGENTA,
-    "account": Color.RED,
+    "account": Color.WHITE,
 }
 
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def parse_log_datetime(value: str | datetime) -> datetime:
+    parsed = (
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if isinstance(value, str)
+        else value
+    )
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone(timezone.utc)
 
 
 class Trader:
@@ -152,7 +163,7 @@ class Trader:
             0.0
             if not len(self.account.total_holding_values_time_series)
             else float(
-                min(
+                max(
                     self.account.total_holding_values_time_series,
                     key=lambda x: datetime.fromisoformat(x.timestamp),
                 ).total_holding_value_in_usdc
@@ -182,7 +193,7 @@ class Trader:
         response = ""
         for log in sorted(
             self.account.logs,
-            key=lambda x: datetime.fromisoformat(x.timestamp),
+            key=lambda x: parse_log_datetime(x.timestamp),
             reverse=True,
         ):
             # Support multiple log formats: AccountLog objects, dicts, or tuples/lists
@@ -223,8 +234,13 @@ class Trader:
 
 
 class TraderView:
-    def __init__(self, trader: Trader):
+    def __init__(
+        self,
+        trader: Trader,
+        refresh_every_n_seconds: float | None = None,
+    ):
         self.trader = trader
+        self.refresh_every_n_seconds = refresh_every_n_seconds
         self.portfolio_value = None
         self.chart = None
         self.holdings_table = None
@@ -242,7 +258,11 @@ class TraderView:
                     show_label=True,
                 )
             with gr.Row(variant="panel"):
-                self.log = gr.HTML(self.trader.get_logs(), elem_classes=["activity-log-container"])
+                self.log = gr.HTML(
+                    self.trader.get_logs(),
+                    label="Recent Activity",
+                    elem_classes=["activity-log-container"],
+                )
             with gr.Row():
                 self.holdings_table = gr.Dataframe(
                     value=self.trader.get_holdings_df,
@@ -271,27 +291,28 @@ class TraderView:
                     elem_classes=["dataframe-fix"],
                 )
 
-        timer = gr.Timer(value=10)
-        timer.tick(
-            fn=self.refresh,
-            inputs=[],
-            outputs=[
-                self.portfolio_value,
-                self.chart,
-                self.holdings_table,
-                self.transactions_table,
-            ],
-            show_progress="hidden",
-            queue=False,
-        )
-        log_timer = gr.Timer(value=0.5)
-        log_timer.tick(
-            fn=self.trader.get_logs,
-            inputs=[self.log],
-            outputs=[self.log],
-            show_progress="hidden",
-            queue=False,
-        )
+        if self.refresh_every_n_seconds is not None:
+            timer = gr.Timer(value=self.refresh_every_n_seconds)
+            timer.tick(
+                fn=self.refresh,
+                inputs=[],
+                outputs=[
+                    self.portfolio_value,
+                    self.chart,
+                    self.holdings_table,
+                    self.transactions_table,
+                ],
+                show_progress="hidden",
+                queue=False,
+            )
+            log_timer = gr.Timer(value=0.5)
+            log_timer.tick(
+                fn=self.trader.get_logs,
+                inputs=[self.log],
+                outputs=[self.log],
+                show_progress="hidden",
+                queue=False,
+            )
 
     async def refresh(self):
         await self.trader.reload()
@@ -307,6 +328,7 @@ class TraderView:
 # Main UI construction
 async def create_ui(
     account_reporters: list[Callable[[], Awaitable[AccountOutput]]],
+    refresh_every_n_seconds: float | None = None,
 ):
     """Create the main Gradio UI for the trading simulation
 
@@ -323,9 +345,14 @@ async def create_ui(
         Trader(account_reporter, account)
         for account_reporter, account in zip(account_reporters, accounts)
     ]
-    trader_views = [TraderView(trader) for trader in traders]
+    trader_views = [
+        TraderView(trader, refresh_every_n_seconds=refresh_every_n_seconds)
+        for trader in traders
+    ]
 
-    with gr.Blocks(title="Crypto Trader Dashboard", fill_width=True, elem_classes=["dashboard"]) as ui:
+    with gr.Blocks(
+        title="Crypto Trader Dashboard", fill_width=True, elem_classes=["dashboard"]
+    ) as ui:
         with gr.Row():
             if not trader_views:
                 gr.Markdown(

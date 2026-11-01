@@ -1,6 +1,6 @@
 import os
 
-DEFAULT_MODEL_NAME = "openai.gpt-oss-120b"
+DEFAULT_MODEL_NAME = "gpt-5-mini"
 
 
 def _configured_model_name(value: str | None) -> str | None:

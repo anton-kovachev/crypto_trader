@@ -12,7 +12,7 @@ def get_cryptocurrency_trader_mcp_servers() -> list[MCPServerStdio]:
             params=MCPServerStdioParams(
                 {
                     "command": sys.executable,
-                    "args": ["-m", "mcp_servers.blockchain_data_server"],
+                    "args": ["-m", "mcp_servers.blockchain_data.server"],
                     "cwd": PROJECT_DIR,
                 }
             ),

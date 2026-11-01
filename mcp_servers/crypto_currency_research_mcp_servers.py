@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -16,13 +17,29 @@ def _qdrant_url() -> str:
     return "http://127.0.0.1:6333"
 
 
+def _uvx_command() -> tuple[str, list[str]]:
+    uv_executable = os.getenv("UV_EXECUTABLE")
+    if uv_executable:
+        return uv_executable, ["tool", "run"]
+
+    uvx_executable = shutil.which("uvx")
+    if uvx_executable:
+        return uvx_executable, []
+
+    uv_executable = shutil.which("uv")
+    if uv_executable:
+        return uv_executable, ["tool", "run"]
+    raise EnvironmentError("Neither uvx nor uv is available to run mcp-server-qdrant")
+
+
 def get_crypto_research_mcp_servers() -> list[MCPServerStdio]:
+    uvx_command, uvx_prefix_args = _uvx_command()
     return [
         MCPServerStdio(
             MCPServerStdioParams(
                 {
                     "command": sys.executable,
-                    "args": ["-m", "mcp_servers.coinmarketcap_data_server"],
+                    "args": ["-m", "mcp_servers.coinmarketcap_data.server"],
                     "cwd": PROJECT_DIR,
                 }
             ),
@@ -43,8 +60,9 @@ def get_crypto_research_mcp_servers() -> list[MCPServerStdio]:
             name="qdrant",
             params=MCPServerStdioParams(
                 {
-                    "command": "uvx",
+                    "command": uvx_command,
                     "args": [
+                        *uvx_prefix_args,
                         "--python",
                         "3.12",
                         "mcp-server-qdrant",

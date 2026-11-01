@@ -23,7 +23,7 @@ from mcp_servers import (
 )
 from mcp_servers.uniswap import get_uniswap_trading_servers
 from tracers import make_trace_id
-from .bedrock_client import create_bedrock_client
+from .openrouter_client import create_openrouter_client
 from .session_storage import get_session_db_path
 from model_config import resolve_model_name
 
@@ -43,7 +43,7 @@ class CryptoCurrencyTrader:
             strategy if strategy is not None else default_trader_stratergy(name)
         )
         self.model = OpenAIChatCompletionsModel(
-            openai_client=create_bedrock_client(),
+            openai_client=create_openrouter_client(),
             model=resolve_model_name(model_name),
         )
 

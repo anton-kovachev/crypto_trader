@@ -19,7 +19,7 @@ from agents import (
 )
 from agents.mcp import MCPServer
 from .crypto_currency_validator import CryptoCurrencyValidator
-from .bedrock_client import create_bedrock_client
+from .openrouter_client import create_openrouter_client
 from .session_storage import get_session_db_path
 from instructions import reporter_instructions
 from model_config import resolve_model_name
@@ -65,7 +65,7 @@ class CryptoCurrencyReporter:
     ):
         self.name: str = name
         self.model = OpenAIChatCompletionsModel(
-            openai_client=create_bedrock_client(),
+            openai_client=create_openrouter_client(),
             model=resolve_model_name(model_name),
         )
 

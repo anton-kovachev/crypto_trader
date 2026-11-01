@@ -5,7 +5,6 @@ description = "Crypto trading and portfolio reporting agents with MCP tools"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "aws-bedrock-token-generator>=1.1.0",
     "boto3>=1.35.0",
     "botocore>=1.35.0",
     "eth-account>=0.14.0",

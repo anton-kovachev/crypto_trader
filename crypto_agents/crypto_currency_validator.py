@@ -17,7 +17,7 @@ from instructions import account_verifier_instructions
 from mcp_servers import get_cryptocurrency_reporter_mcp_servers
 from output_models import AccountValidationOutput, ReporterOutput
 from tracers import make_trace_id
-from .bedrock_client import create_bedrock_client
+from .openrouter_client import create_openrouter_client
 from .session_storage import get_session_db_path
 from model_config import resolve_model_name
 
@@ -35,7 +35,7 @@ class CryptoCurrencyValidator:
         self.name = name
         self.reporter_output = reporter_output
         self.model = OpenAIChatCompletionsModel(
-            openai_client=create_bedrock_client(),
+            openai_client=create_openrouter_client(),
             model=resolve_model_name(model_name),
         )
         self.session = SQLiteSession(

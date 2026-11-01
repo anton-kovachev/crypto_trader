@@ -1,4 +1,6 @@
 import asyncio
+import math
+import os
 from collections.abc import Awaitable, Callable
 
 from dotenv import load_dotenv
@@ -26,13 +28,23 @@ async def load_account(account_name: str) -> AccountOutput:
     return reporter_output.account
 
 
-async def main() -> None:
+async def main(refresh_every_n_seconds: float | None = None) -> None:
+    is_lambda = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+    if refresh_every_n_seconds is None and is_lambda:
+        configured_interval = float(os.getenv("UI_REFRESH_EVERY_N_SECONDS", "30"))
+        if not math.isfinite(configured_interval) or configured_interval < 0:
+            raise ValueError("UI_REFRESH_EVERY_N_SECONDS must be finite and non-negative")
+        refresh_every_n_seconds = configured_interval or None
+
     reporter_outputs = await asyncio.to_thread(get_reporter_outputs)
     account_reporters = [
         make_account_reporter(output.account.account_name)
         for output in reporter_outputs
     ]
-    ui, _ = await create_ui(account_reporters)
+    ui, _ = await create_ui(
+        account_reporters,
+        refresh_every_n_seconds=refresh_every_n_seconds,
+    )
 
     ui.launch(
         theme=Default(
@@ -40,7 +52,9 @@ async def main() -> None:
         ),
         css=css,
         js=js,
-        inbrowser=True,
+        server_name="0.0.0.0" if is_lambda else None,
+        server_port=int(os.getenv("PORT", "7860")),
+        inbrowser=not is_lambda,
     )
 
 

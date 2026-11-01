@@ -1,3 +1,5 @@
+"""MCP tools for blockchain account and Uniswap router data."""
+
 import config
 import json
 from mcp.server import MCPServer
@@ -9,7 +11,7 @@ from services.blockchain.account_service import (
     get_account_nonce as get_account_network_nonce,
 )
 
-RESOURCES_DIR = Path(__file__).parent.parent.resolve() / "resources"
+RESOURCES_DIR = Path(__file__).resolve().parents[2] / "resources"
 
 mcp = MCPServer("blockchain_data_server")
 

@@ -1,3 +1,5 @@
+"""MCP tools for CoinMarketCap data."""
+
 from typing import Literal
 
 from mcp.server import MCPServer
